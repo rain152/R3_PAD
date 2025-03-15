@@ -525,7 +525,7 @@ class DefectDataset(Dataset):
             sub_dir = os.path.join(set_dir, sc)
             img_dir = sub_dir
             img_paths = os.listdir(img_dir)
-            img_paths.sort()
+            img_paths.sort(key=lambda x: int(x.split('.')[0]))
             for p in img_paths:
                 i_path = os.path.join(img_dir, p)
                 if not i_path.lower().endswith(

@@ -4,7 +4,6 @@ import yaml
 import json
 import pycolmap
 import numpy as np
-import shutil
 from tqdm import tqdm
 from pathlib import Path
 from glob import glob
@@ -22,7 +21,7 @@ from gaussian_splatting.scene.cameras import Camera
 from easydict import EasyDict
 from utils_pose_est import ModelHelper, update_config, DefectDataset
 from aupro import calculate_au_pro_au_roc
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 # modified hloc to save 
 from hloc import extract_features, match_features, pairs_from_retrieval, triangulation, localize_sfm
 from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer 
@@ -36,9 +35,9 @@ pre_parser.add_argument("-c", "-classname", metavar="c", type=str, help="current
 pre_parser.add_argument("-seed", type=int, help="seed for random behavior", default=0)
 pre_parser.add_argument("-iters", type=int, help="number of training iterations for 3DGS", default=15000)
 pre_parser.add_argument("-skip_loc", help='skip localization', action='store_true')                 
-pre_parser.add_argument("-skip_train", help='skip training 3dgs', action='store_true')                        
+pre_parser.add_argument("-skip_train", help='skip training 3dgs', action='store_true')                    
 pre_parser.add_argument("-data_path", type=str, help="preprocessed dataset path", default="MAD-Sim/")         
-pre_parser.add_argument("-n_match", type=int, default=15, help="num of matches for netvlad image retrieval")    
+pre_parser.add_argument("-n_match", type=int, default=5, help="num of matches for netvlad image retrieval")
 pre_parser.add_argument("-trainset_ratio", type=float, default=1.0, help="percentage of training samples")     
 pre_parser.add_argument("-feature_ext", type=str, default='superpoint', help="feature extractor", choices=["superpoint", "aliked"])                  
 
@@ -60,9 +59,9 @@ if not lego_args.skip_loc: # create sfm & localize testset
     os.symlink('../train/', image_path/'train/')
     os.symlink('../test/', image_path/'test/')
     ref_pairs = outputs/'ref_pairs.txt'
-    loc_pairs = outputs/'loc_pairs.txt'
     os.makedirs(outputs, exist_ok=True)
-    with open(os.path.join(scene_path, 'transforms.json')) as f: flist = json.load(f)
+    with open(os.path.join(scene_path, 'transforms.json')) as f:
+        flist = json.load(f)
     first_img = Image.open(scene_path/'train/good/0.png')
     (w, h), cam_angle_x = first_img.size, flist['camera_angle_x']
     focal = 0.5*w/np.tan(0.5*cam_angle_x)
@@ -101,9 +100,7 @@ if not lego_args.skip_loc: # create sfm & localize testset
     global_descriptors = extract_features.main(retrieval_conf, image_path, outputs)
     features = extract_features.main(feature_conf, image_path, outputs)
     pairs_from_retrieval.main(global_descriptors, ref_pairs, num_matched=lego_args.n_match, query_prefix='train', db_prefix='train')
-    pairs_from_retrieval.main(global_descriptors, loc_pairs, num_matched=lego_args.n_match, query_prefix='test', db_prefix='train')
     sfm_matches = match_features.main(matcher_conf, ref_pairs, feature_conf["output"], outputs)
-    loc_matches = match_features.main(matcher_conf, loc_pairs, feature_conf["output"], outputs)
     rec = triangulation.main(outputs, outputs, image_path, ref_pairs, features, sfm_matches)
     end.record()
     sfm_time = start.elapsed_time(end)
@@ -113,6 +110,9 @@ if not lego_args.skip_loc: # create sfm & localize testset
     results = scene_path/'query_poses.txt'
 
     start.record()
+    loc_pairs = outputs/'loc_pairs.txt'
+    pairs_from_retrieval.main(global_descriptors, loc_pairs, num_matched=lego_args.n_match, query_prefix='test', db_prefix='train')
+    loc_matches = match_features.main(matcher_conf, loc_pairs, feature_conf["output"], outputs)
     localize_sfm.main(
         rec,
         query_list_with_intrinsics_path,
@@ -120,7 +120,7 @@ if not lego_args.skip_loc: # create sfm & localize testset
         features,
         loc_matches,
         results,
-        covisibility_clustering=False,
+        covisibility_clustering=True,
     )  
     end.record()
     loc_time = start.elapsed_time(end)/len(query_list_with_intrinsics)
@@ -130,7 +130,7 @@ if lego_args.skip_train: print("skipping training!")
 else:
     # Set up command line argument parser
     training_args = ["-w", "-s", data_path, "-m", result_dir, "--iterations", str(lego_args.iters), 
-                     "--densification_interval", "1000"] 
+                     "--densification_interval", "1000"]
     print("training args: ", training_args)
     parser = ArgumentParser(description="3DGS Training script parameters")
     lp = ModelParams(parser)
@@ -249,3 +249,57 @@ print('image ROCAUC: %.3f' % (img_roc_auc))
 with open(Path(result_dir)/f'metrics_{lego_args.seed}_{lego_args.trainset_ratio}.txt','w') as fp:
     fp.write(f'Pixel_ROCAUC: {per_pixel_rocauc}\naupro: {au_pro}\nau_roc: {au_roc}\nImage_ROCAUC: {img_roc_auc}\n'
             f'SFM_time: {sfm_time}\nLoc_time: {loc_time}\nTrain_time: {train_time}\nNVS_time: {nvs_time}\nCNN_time: {cnn_time}')
+
+
+import csv
+csv_path = './AD_results.csv'
+with open(csv_path, mode='a', newline='') as csv_file:
+    writer = csv.writer(csv_file)
+    # 写入数据行
+    writer.writerow([lego_args.c, per_pixel_rocauc, img_roc_auc, au_pro])
+
+import matplotlib.pyplot as plt
+from torchvision import transforms
+def visualize_results(syn_imgs, ref_imgs, scores, gt_masks, result_dir):
+    resize = transforms.Resize((224, 224))
+    """生成可视化对比图"""
+    comparison_dir = Path(result_dir)/'comparisons'
+    comparison_dir.mkdir(exist_ok=True)
+
+    for idx in tqdm(range(len(syn_imgs)), desc="Generating visualizations"):
+        fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+        
+        # 原始图像
+        orig_img = ref_imgs[idx].cpu().permute(1, 2, 0).numpy()
+        axes[0].imshow(np.clip(orig_img, 0, 1))
+        axes[0].set_title("Original Image")
+        axes[0].axis('off')
+
+        # 重建图像
+        recon_img = syn_imgs[idx].cpu().permute(1, 2, 0).numpy()
+        axes[1].imshow(np.clip(recon_img, 0, 1))
+        axes[1].set_title("Reconstructed Image")
+        axes[1].axis('off')
+        
+        # 异常热图叠加在原始图像上
+        heatmap = scores[idx]
+        heatmap_normalized = (heatmap - np.min(heatmap)) / (np.max(heatmap) - np.min(heatmap))
+        heatmap_colored = plt.cm.jet(heatmap_normalized)[..., :3]  # 使用 'jet' 颜色映射，并去掉 alpha 通道
+        orig_img_resized = resize(torch.tensor(orig_img).permute(2, 0, 1)).permute(1, 2, 0).numpy()
+        overlay_img = np.clip(orig_img_resized, 0, 1) * 0.5 + heatmap_colored * 0.5  # 调整叠加比例
+        axes[2].imshow(overlay_img) 
+        axes[2].set_title("Anomaly Heatmap (Overlay)")
+        axes[2].axis('off')
+
+        # 真实掩码
+        axes[3].imshow(gt_masks[idx].squeeze().cpu().numpy(), cmap='gray')
+        axes[3].set_title("Ground Truth")
+        axes[3].axis('off')
+        
+        plt.tight_layout()
+        plt.savefig(comparison_dir/f'comparison_{idx:04d}.png', bbox_inches='tight')
+        plt.close()
+
+vis = False
+if vis:
+    visualize_results(syn_imgs, ref_imgs, scores, gt_masks, './tmp/')
