@@ -1,13 +1,14 @@
-# SplatPose+: Real-time Image-Based Pose-Agnostic 3D Anomaly Detection
+# Pose-Agnostic Anomaly Detection with Retinex-based Illumination Correction
 This is the official code to the paper 
-[**"SplatPose+: Real-time Image-Based Pose-Agnostic 3D Anomaly Detection"**](https://arxiv.org/abs/2410.12080) 
-by Yizhe Liu, Yan Song Hu, Yuhao Chen, John Zelek, which was accepted to the ECCV 2024 Vision Workshop.
+[**"Pose-Agnostic Anomaly Detection with Retinex-based Illumination Correction"**]
+by Yuji Wang, Ran Yi, et. al., xxxx.
 
 
-![Qualitative Result](./assets/fig.png)
+![Qualitative Result](./assets/overview.png)
 
 ## Abstract:
->Image-based Pose-Agnostic 3D Anomaly Detection is an important task that has emerged in industrial quality control. This task seeks to find anomalies from query images of a tested object given a set of reference images of an anomaly-free object. The challenge is that the query views (a.k.a poses) are unknown and can be different from the reference views. Currently, new methods such as  OmniposeAD and SplatPose have emerged to bridge the gap by synthesizing pseudo reference images at the query views for pixel-to-pixel comparison. However, none of these methods can infer in real-time, which is critical in industrial quality control for massive production. For this reason, we propose SplatPose+, which employs a hybrid representation consisting of a Structure from Motion (SfM) model for localization and a 3D Gaussian Splatting (3DGS) model for Novel View Synthesis. Although our proposed pipeline requires the computation of an additional SfM model, it offers real-time inference speeds and faster training compared to SplatPose. Quality-wise, we achieved a new SOTA on the Pose-agnostic Anomaly Detection benchmark with the Multi-Pose Anomaly Detection (MAD-SIM) dataset.  
+>Traditional industrial anomaly detection datasets, such as MVTec-2D and MVTec-3D, are typically based on a fixed-pose assumption.  However, in real-world scenarios, to achieve more thorough detection, a wide variety of object poses are often involved. While recent works try to address this challenge, they still struggle with detection accuracy and hard cases like reflective surfaces. In this paper, we propose $R^3\_PAD$, integrating **R**etinex-based illumination correction, **R**eal-time pose estimation, and **R**obust multi-scale anomaly detection. First, to bridge the potential illumination differences between 3D reconstructed models and real-world scenes, we propose Retinex-UNet to correct illumination for enhanced robustness in diverse lighting. Second, we design a multi-scale analysis (MSA) module that combines shallow and deep features for precise anomaly detection. Finally, to further improve efficiency, we introduce an early-stop mechanism to accelerate keypoint matching in the pose estimation framework, improving efficiency without compromising accuracy. 
+Extensive experiments demonstrate the superiority of $R^3\_PAD$, achieving Image-AUROC of 97.9\% and Pixel-AUPRO of 97.2\%. Ablation studies validate the effectiveness of each component, and we further show the scalability of Retinex-UNet when applied to diverse scenarios.
 
 
 
