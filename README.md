@@ -1,7 +1,7 @@
 # Pose-Agnostic Anomaly Detection with Retinex-based Illumination Correction
-This is the official code to the paper 
-[**"Pose-Agnostic Anomaly Detection with Retinex-based Illumination Correction"**]
-by Yuji Wang, Ran Yi, et. al., xxxx.
+This is the official code for the paper 
+[**"Pose-Agnostic Anomaly Detection with Retinex-based Illumination Correction"**](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=6055450)
+by Yuji Wang, Ran Yi, et al.
 
 
 ![Qualitative Result](./assets/overview.png)
