@@ -8,7 +8,7 @@ by Yuji Wang, Ran Yi, et al.
 
 ## Abstract:
 >Traditional industrial anomaly detection datasets, such as MVTec-2D and MVTec-3D, are typically based on a fixed-pose assumption.  However, in real-world scenarios, to achieve more thorough detection, a wide variety of object poses are often involved. While recent works try to address this challenge, they still struggle with detection accuracy and hard cases like reflective surfaces. In this paper, we propose $R^3\_PAD$, integrating **R**etinex-based illumination correction, **R**eal-time pose estimation, and **R**obust multi-scale anomaly detection. First, to bridge the potential illumination differences between 3D reconstructed models and real-world scenes, we propose Retinex-UNet to correct illumination for enhanced robustness in diverse lighting. Second, we design a multi-scale analysis (MSA) module that combines shallow and deep features for precise anomaly detection. Finally, to further improve efficiency, we introduce an early-stop mechanism to accelerate keypoint matching in the pose estimation framework, improving efficiency without compromising accuracy. 
-Extensive experiments demonstrate the superiority of $R^3\_PAD$, achieving Image-AUROC of 97.9\% and Pixel-AUPRO of 97.2\%. Ablation studies validate the effectiveness of each component, and we further show the scalability of Retinex-UNet when applied to diverse scenarios.
+Extensive experiments demonstrate the superiority of $R^3\_PAD$, achieving Image-AUROC of 97.9\% and Pixel-AUPRO of 97.4\%. Ablation studies validate the effectiveness of each component, and we further show the scalability of Retinex-UNet when applied to diverse scenarios.
 
 
 
